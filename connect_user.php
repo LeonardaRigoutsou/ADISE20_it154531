@@ -4,6 +4,12 @@
 
     include_once dirname(__FILE__) . '/dbconnect.php';
 
+    if ($color != 'B' && $color != 'R'){
+        header("HTTP/1.1 400 Bad Request");
+        header('Content-type: application/json');
+        print json_encode(['errormesg'=>"Wrong color."]);
+        exit;
+    }
 
     $sql = 'INSERT INTO players (username,color,token) VALUES (?,?,md5(CONCAT( ?, NOW())))';
     $stmt = $mysqli->prepare($sql);
