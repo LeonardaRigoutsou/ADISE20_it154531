@@ -1,5 +1,5 @@
 <?php
-    $host='localhost';
+    $host='localhost:3333';
     $db='CONNECT_FOUR_DB';
 
     //gia na min exw to pass sto git tha to balw xwrista
