@@ -28,7 +28,7 @@ CREATE TABLE `board` (
   `color` enum('B','R') NOT NULL,
   `id` int(11) NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -61,7 +61,7 @@ CREATE TABLE `game_status` (
 
 LOCK TABLES `game_status` WRITE;
 /*!40000 ALTER TABLE `game_status` DISABLE KEYS */;
-INSERT INTO `game_status` VALUES ('started',NULL,NULL,'2020-12-31 16:40:28');
+INSERT INTO `game_status` VALUES ('not active',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `game_status` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -98,7 +98,7 @@ CREATE TABLE `players` (
   `token` varchar(32) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_color` (`color`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -107,7 +107,6 @@ CREATE TABLE `players` (
 
 LOCK TABLES `players` WRITE;
 /*!40000 ALTER TABLE `players` DISABLE KEYS */;
-INSERT INTO `players` VALUES ('Leonarda','R',6,'840d7a1e72a6f613e33499c4f21c2f79'),('Leonarda','B',7,'d6d4781c1eab463887edcde8b45212b6');
 /*!40000 ALTER TABLE `players` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -128,7 +127,8 @@ DELIMITER ;;
     IF players_count = 1 THEN 
 		UPDATE game_status SET status='initialized';
     ELSEIF players_count = 2 THEN  
-		UPDATE game_status SET status='started';
+		UPDATE game_status SET status='started', p_turn='R';
+        
 	END IF;
 	END */;;
 DELIMITER ;
@@ -148,60 +148,63 @@ DELIMITER ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
 /*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `check_winner`()
+CREATE DEFINER=`root`@`localhost` PROCEDURE `check_winner`(
+)
 check_winner:
 	BEGIN
 		DECLARE status, last_color TEXT;
-        DECLARE last_x, last_y, marks TINYINT;
+    DECLARE last_x, last_y, marks TINYINT;
+		
+		SET marks = 0;
+
+    SELECT status INTO status
+    FROM game_status LIMIT 1;
+
+    IF status != 'started' THEN
+      LEAVE check_winner;
+    END IF;
+
+    SELECT x,y,color INTO last_x,last_y,last_color
+    FROM board
+    ORDER BY id DESC LIMIT 1;
         
-        SELECT status INTO status
-        FROM game_status LIMIT 1;
-        
-        IF status != started THEN
-        LEAVE check_winner;
-        END IF;
-        
-        SELECT x,y,color INTO last_x,last_y,last_color
-        FROM board 
-        ORDER BY id DESC LIMIT 1;
-        
-        SELECT COUNT(id) INTO marks
+    SELECT COUNT(id) INTO marks
 		FROM board
 		WHERE x = last_x
-			AND MAX(y) - MIN(y) = 3
 			AND color = last_color
-		GROUP BY x;
+		GROUP BY x
+		HAVING MAX(y) - MIN(y) = 3;
         
-        IF marks != 4 THEN 
+    IF marks != 4 THEN
 			SELECT COUNT(id) INTO marks
 			FROM board
 			WHERE y = last_y
-				AND MAX(x) - MIN(x) = 3
 				AND color = last_color
-			GROUP BY y;
+			GROUP BY y
+      HAVING MAX(x) - MIN(x) = 3;
 		END IF;
 
 		IF marks != 4 THEN 
 			SELECT COUNT(id) INTO marks
 			FROM board
 			WHERE color = last_color
-				AND MAX(x) - MIN(x) = 3
-				AND MAX(y) - MIN(y) = 3
-			GROUP BY (x - y);
+			GROUP BY (x - y)
+			HAVING MAX(x) - MIN(x) = 3
+			  AND MAX(y) - MIN(y) = 3;
 		END IF;
 
 		IF marks != 4 THEN 
 			SELECT COUNT(id) INTO marks
 			FROM board
 			WHERE color = last_color
-				AND MAX(x) - MIN(x) = 3
-				AND MAX(y) - MIN(y) = 3
-			GROUP BY (x + y);
+			GROUP BY (x + y)
+			HAVING MAX(x) - MIN(x) = 3
+			  AND MAX(y) - MIN(y) = 3;
 		END IF;
 	
-        /*an den yparxei kamia 4ada*/
+    /*an den yparxei kamia 4ada*/
 		IF marks != 4 THEN 
 			/*GIA PERIPTOSI ISOPALIAS*/
 			SELECT COUNT(id) INTO marks 
@@ -217,11 +220,12 @@ check_winner:
 			ELSE
 				UPDATE game_status SET p_turn = 'B';
 			END IF;
+
 			LEAVE check_winner;
 		END IF;
         
-        /*yparxei nikitis*/
-        UPDATE game_status SET result = last_color ,status='ended';
+    /*yparxei nikitis*/
+    UPDATE game_status SET result = last_color ,status='ended';
         
 	END ;;
 DELIMITER ;
@@ -261,46 +265,55 @@ DELIMITER ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
 /*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `players_movement`(x TINYINT, id INT)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `players_movement`(
+  IN x tinyint, IN id int
+)
 players_movement:
 	BEGIN
 		DECLARE max_y tinyint;
 		DECLARE color, turn, status TEXT;
-        
-		IF x<1 OR x>7 THEN 
-        LEAVE players_movement;
-        END IF;
 
-        /*metrima markwn stilis*/
-        SELECT max(y) INTO max_y 
-        FROM board 
-        WHERE board.x=x;
-        
-        /*elegxos an max_y < 6 */
-        IF max_y = 6 THEN 
-        LEAVE players_movement;
-        END IF;
-        
-        /*Pairnw apo to 1 row tis metablites p_turn kai status*/
-        SELECT p_turn, status INTO turn, status  
-        FROM game_status LIMIT 1;
-        
-        IF status !='started' THEN
-        LEAVE players_movement;
-        END IF;
-        
-	    SELECT color INTO color
-        FROM players
-        WHERE players.id=id;
-        
+		IF x<1 OR x>7 THEN 
+      SELECT 0 AS success;
+      LEAVE players_movement;
+    END IF;
+
+    /*metrima markwn stilis*/
+    SELECT COUNT(y) INTO max_y
+    FROM board
+    WHERE board.x=x;
+
+    /*elegxos an max_y < 6 */
+    IF max_y = 6 THEN
+      SELECT 0 AS success;
+      LEAVE players_movement;
+    END IF;
+
+    /*Pairnw apo to 1 row tis metablites p_turn kai status*/
+    SELECT game_status.p_turn, game_status.status INTO turn, status
+    FROM game_status LIMIT 1;
+
+    IF status !='started' THEN
+      SELECT 0 AS success;
+      LEAVE players_movement;
+    END IF;
+
+    SELECT players.color INTO color
+    FROM players
+    WHERE players.id=id;
+
 		IF color != turn THEN 
-        LEAVE players_movement;
-        END IF;
-        
-        INSERT INTO board(x,y,color) VALUES (x,max_y+1,color);
-			
+      SELECT 0 AS success;
+      LEAVE players_movement;
+    END IF;
+
+    INSERT INTO board(x,y,color) VALUES (x,max_y+1,color);
+
+		CALL check_winner();
+
+		SELECT 1 AS success;
 	END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -317,4 +330,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-01 18:34:37
+-- Dump completed on 2021-01-02  1:48:16
