@@ -13,7 +13,7 @@
 <br>
 <b>Απαιτήσεις:</b>
 <li>
-  <ul> Apache2 </ul>
+  <ul>Apache2</ul>
   <ul>MySQL Server</ul>
   <ul>php</ul>
 </li>
