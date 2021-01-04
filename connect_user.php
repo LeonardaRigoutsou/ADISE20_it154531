@@ -1,11 +1,13 @@
 <?php
-    $username = $_POST['username'];
-    $color = $_POST['color'];
+    $input = json_decode(file_get_contents('php://input'),true);
+    
+    $username = $input['username'];
+    $color = $input['color'];
 
     include_once dirname(__FILE__) . '/dbconnect.php';
 
     if ($color != 'B' && $color != 'R'){
-        header("HTTP/1.1 400 Bad Request");
+        http_response_code(400);
         header('Content-type: application/json');
         print json_encode(['errormesg'=>"Wrong color."]);
         exit;
@@ -14,13 +16,19 @@
     $sql = 'INSERT INTO players (username,color,token) VALUES (?,?,md5(CONCAT( ?, NOW())))';
     $stmt = $mysqli->prepare($sql);
     if (!$stmt) {
-        die('Insertion failed: ' . $mysqli->error);
+        http_response_code(400);
+        header('Content-type: application/json');
+        print json_encode(['Insertion failed: ' . $mysqli->error]);
+        exit;
     }
 
 
     $stmt->bind_param('sss', $username,$color,$username);
     if (!$stmt->execute()) {
-        die('Insertion failed: ' . $stmt->error);
+        http_response_code(400);
+        header('Content-type: application/json');
+        print json_encode(['Insertion failed: ' . $mysqli->error]);
+        exit;
     }
 
     $player_id = $stmt->insert_id;
