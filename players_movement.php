@@ -70,6 +70,11 @@
         header('Content-type: application/json');
         print json_encode(['errormesg'=>"Not your turn"]);
         exit;
+    }else if ($data1['success'] === 2) {
+        http_response_code(400);
+        header('Content-type: application/json');
+        print json_encode(['errormesg'=>"Dose sostes diastaseis"]);
+        exit;
     }else{
         http_response_code(400);
         header('Content-type: application/json');
