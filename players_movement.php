@@ -8,11 +8,17 @@
     $token = $input['token'];
     $column = $input['column'];
 
-    $sql1 = 'SELECT status FROM game_status';
+    $sql1 = 'SELECT * FROM game_status';
     $stmt1 = $mysqli->prepare($sql1);
     $stmt1->execute();
     $res = $stmt1->get_result();
     $data = $res->fetch_assoc();
+    if ($data['status'] == 'ended'){
+        http_response_code(400);
+        header('Content-type: application/json');
+        print json_encode(['errormesg'=>" To paixnidi teleiose me nikiti ton ". $data['result']]);
+        exit;
+    }
     if ($data['status'] != 'started'){
         http_response_code(400);
         header('Content-type: application/json');
