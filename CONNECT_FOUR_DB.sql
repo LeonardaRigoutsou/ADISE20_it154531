@@ -28,7 +28,7 @@ CREATE TABLE `board` (
   `color` enum('B','R') NOT NULL,
   `id` int(11) NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -98,7 +98,7 @@ CREATE TABLE `players` (
   `token` varchar(32) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_color` (`color`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -148,10 +148,9 @@ DELIMITER ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
 /*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'IGNORE_SPACE,STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 SET sql_mode              = 'NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `check_winner`(
-)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `check_winner`()
 check_winner:
 	BEGIN
 		DECLARE status, last_color TEXT;
@@ -265,7 +264,7 @@ DELIMITER ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
 /*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'IGNORE_SPACE,STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 SET sql_mode              = 'NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `players_movement`(
   IN x tinyint, IN id int
@@ -275,8 +274,21 @@ players_movement:
 		DECLARE max_y tinyint;
 		DECLARE color, turn, status TEXT;
 
-		IF x<1 OR x>7 THEN 
+	SELECT game_status.p_turn, game_status.status INTO turn, status
+    FROM game_status 
+    LIMIT 1;
+    
+	SELECT players.color INTO color
+    FROM players
+    WHERE players.id=id;
+
+	IF color != turn THEN 
       SELECT 0 AS success;
+      LEAVE players_movement;
+    END IF;	
+
+	IF x<1 OR x>7 THEN 
+      SELECT 2 AS success;
       LEAVE players_movement;
     END IF;
 
@@ -287,33 +299,30 @@ players_movement:
 
     /*elegxos an max_y < 6 */
     IF max_y = 6 THEN
-      SELECT 0 AS success;
+      SELECT 3 AS success;
       LEAVE players_movement;
     END IF;
 
     /*Pairnw apo to 1 row tis metablites p_turn kai status*/
     SELECT game_status.p_turn, game_status.status INTO turn, status
-    FROM game_status LIMIT 1;
+    FROM game_status 
+    LIMIT 1;
+    
+    IF status ='ended' THEN
+      SELECT 4 AS success;
+      LEAVE players_movement;
+    END IF;
 
     IF status !='started' THEN
       SELECT 0 AS success;
       LEAVE players_movement;
     END IF;
 
-    SELECT players.color INTO color
-    FROM players
-    WHERE players.id=id;
-
-		IF color != turn THEN 
-      SELECT 0 AS success;
-      LEAVE players_movement;
-    END IF;
-
     INSERT INTO board(x,y,color) VALUES (x,max_y+1,color);
 
-		CALL check_winner();
+	CALL check_winner();
 
-		SELECT 1 AS success;
+	SELECT 1 AS success;
 	END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -330,4 +339,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-02  1:48:16
+-- Dump completed on 2021-01-06  3:34:27
