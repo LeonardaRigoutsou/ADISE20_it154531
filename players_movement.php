@@ -75,15 +75,19 @@
         header('Content-type: application/json');
         print json_encode(['errormesg'=>"Dose sostes diastaseis"]);
         exit;
-    }else{
+    }else if ($data1['success'] === 3) {
         http_response_code(400);
         header('Content-type: application/json');
-        print json_encode(['errormesg'=>"Success"]);
+        print json_encode(['errormesg'=>"Gemise i stili me 6 markes, parakalo dialexe mia alli stili"]);
+        exit;
+    }else{
+        header('Content-type: application/json');
+        print json_encode(['msg'=>"Success"]);
         exit;
     }
 
     header('Content-type: application/json');
-    print json_encode(['errormesg'=>"Success!"]);
+    print json_encode(['mesg'=>"Success!"]);
 
 
 
